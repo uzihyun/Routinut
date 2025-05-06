@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(25, 25, 112, 0.6)', // 남색 계열 흐림 효과
+    backgroundColor: 'rgba(15, 15, 40, 0.6)'
   },
   content: {
     flex: 1,

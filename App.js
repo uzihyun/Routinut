@@ -14,11 +14,11 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="Login" component={Login} /* options={{ headerShown: false }} *//>
-        <Stack.Screen name="Schedule" component={Schedule} /* options={{ headerShown: false }} *//>
-        <Stack.Screen name="Join" component={Join} /* options={{ headerShown: false }} *//>
-        <Stack.Screen name="ScheduleForm" component={ScheduleForm} /* options={{ headerShown: false }} *//>
-        <Stack.Screen name="Main" component={Main} /* options={{ headerShown: false }} *//>
+        <Stack.Screen name="Login" component={Login} options={{ headerShown: false }}/>
+        <Stack.Screen name="Schedule" component={Schedule} options={{ headerShown: false }}/>
+        <Stack.Screen name="Join" component={Join} options={{ headerShown: false }}/>
+        <Stack.Screen name="ScheduleForm" component={ScheduleForm} options={{ headerShown: false }}/>
+        <Stack.Screen name="Main" component={Main} options={{ headerShown: false }}/>
       </Stack.Navigator>
     </NavigationContainer>
   );
