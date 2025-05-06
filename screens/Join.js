@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   signupButton: {
-    backgroundColor: '#5D6BFF', // 진한 남색 (Navy)
+    backgroundColor: '#5A86E9',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

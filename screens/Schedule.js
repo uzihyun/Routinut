@@ -7,27 +7,22 @@ export default function Schedule() {
   const navigation = useNavigation();
 
   const handleAddSchedule = () => {
-    // 여기서 다른 화면으로 이동할 수 있어요. 예: ScheduleForm
-    // navigation.navigate('ScheduleForm');
-    console.log('일정 추가 버튼 클릭됨');
+    navigation.navigate('ScheduleForm');
   };
 
   return (
     <Background>
       <View style={styles.container}>
-        {/* 오른쪽 상단 별+ 버튼 */}
         <TouchableOpacity onPress={handleAddSchedule} style={styles.starButton}>
           <Image source={require('../assets/star-plus.png')} style={styles.starIcon} />
         </TouchableOpacity>
 
-        {/* 중앙 우주인 시계 이미지 */}
         <Image
           source={require('../assets/astronaut-clock.png')}
           style={styles.astroImage}
           resizeMode="contain"
         />
 
-        {/* 하단 안내 문구 */}
         <Text style={styles.text}>일정을 등록해주세요!</Text>
       </View>
     </Background>
