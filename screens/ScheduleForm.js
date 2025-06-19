@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect  } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import Background from '../component/Background';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 9); // 9~22시
+const HOURS = Array.from({ length: 18 }, (_, i) => i + 7); // 7~24시
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 export default function ScheduleForm() {
@@ -21,21 +23,99 @@ export default function ScheduleForm() {
   const [name, setName] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [selectedDay, setSelectedDay] = useState(1); // 월요일
+  const [selectedDays, setSelectedDays] = useState([]); // 여러 요일 선택 가능
+  const toggleDay = (dayIndex) => {
+    setSelectedDays(prev =>
+      prev.includes(dayIndex)
+        ? prev.filter(d => d !== dayIndex)
+        : [...prev, dayIndex]
+    );
+  };
+
+  const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      try {
+        const userId = await AsyncStorage.getItem('loggedInUserId');
+        if (!userId) {
+          Alert.alert('오류', '로그인 정보가 없습니다.');
+          return;
+        }
+
+        const response = await axios.get(`https://routinut-backend.onrender.com/api/schedules/user/${userId}`);
+        const fetched = response.data;
+
+        const converted = fetched.map(item => ({
+          name: item.title,
+          day: DAYS.indexOf(item.dayOfWeek),
+          startTime: parseInt(item.startTime.split(':')[0]),
+          endTime: parseInt(item.endTime.split(':')[0]),
+        }));
+
+        setScheduleList(prev => [...prev, ...converted]);
+      } catch (error) {
+        console.error('일정 불러오기 실패:', error);
+        Alert.alert('오류', '일정 불러오기에 실패했습니다.');
+      }
+    };
+
+    fetchSchedules();
+  }, []);
+
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null); // { day, hour }
+
 
   const handleAdd = () => {
-    if (!name || !startTime || !endTime) return;
-    const newSchedule = {
+    if (!name || !startTime || !endTime || selectedDays.length === 0) return;
+
+    const newSchedules = selectedDays.map(day => ({
       name,
       startTime: parseInt(startTime),
-      endTime: parseInt(endTime),
-      day: selectedDay,
-    };
-    setScheduleList([...scheduleList, newSchedule]);
+      endTime: parseInt(endTime), 
+      day,
+    }));
+
+    setScheduleList([...scheduleList, ...newSchedules]);
     setName('');
     setStartTime('');
     setEndTime('');
+    setSelectedDays([]); // 선택 초기화
   };
+
+  const handleSubmitSchedules = async () => {
+    try {
+      const userInfo = await AsyncStorage.getItem('loggedInUserId');
+      if (!userInfo) {``
+        Alert.alert('오류', '로그인된 사용자 정보가 없습니다.');
+        return;
+      }
+      const userId = userInfo;
+
+      // scheduleList를 API 요청 형식에 맞게 변환
+      const schedules = scheduleList.map(item => ({
+        title: item.name,
+        dayOfWeek: ['일', '월', '화', '수', '목', '금', '토'][item.day], // 숫자 인덱스를 요일 문자열로
+        startTime: item.startTime,
+        endTime: item.endTime,
+      }));
+
+      const requestBody = {
+        userId,
+        schedules,
+      };
+
+      const response = await axios.put('https://routinut-backend.onrender.com/api/schedules/bulk', requestBody);
+      console.log('스케줄 저장 성공:', response.data);
+      Alert.alert('성공', '스케줄이 저장되었습니다.');
+      navigation.navigate('Routine');
+
+    } catch (error) {
+      console.error('스케줄 저장 오류:', error);
+      Alert.alert('오류', '스케줄 저장 중 문제가 발생했습니다.');
+    }
+  };
+
 
   const handleDelete = (day, hour) => {
     const updated = scheduleList.filter(
@@ -74,7 +154,12 @@ export default function ScheduleForm() {
                     <TouchableOpacity
                       key={colIdx}
                       style={[styles.cell, item ? styles.activeCell : null]}
-                      onPress={() => item && handleDelete(colIdx, hour)}
+                      onPress={() => {
+                        if (item) {
+                          setSelectedItem({ day: colIdx, hour });
+                          setPopupVisible(true);
+                        }
+                      }}
                     >
                       {item && <Text style={styles.cellText}>{item.name}</Text>}
                     </TouchableOpacity>
@@ -103,14 +188,14 @@ export default function ScheduleForm() {
               key={i}
               style={[
                 styles.dayButton,
-                selectedDay === i && styles.dayButtonActive,
+                selectedDays.includes(i) && styles.dayButtonActive,
               ]}
-              onPress={() => setSelectedDay(i)}
+              onPress={() => toggleDay(i)}
             >
               <Text
                 style={[
                   styles.dayText,
-                  selectedDay === i && styles.dayTextActive,
+                  selectedDays.includes(i) && styles.dayTextActive,
                 ]}
               >
                 {d}
@@ -118,12 +203,15 @@ export default function ScheduleForm() {
             </TouchableOpacity>
           ))}
         </View>
+
         <Text style={styles.label}>시간</Text>
         <View style={styles.timeRow}>
           <TextInput
             style={styles.timeInput}
             value={startTime}
-            onChangeText={setStartTime}
+            onChangeText={(text) => {
+              if (/^\d*$/.test(text)) setStartTime(text);
+            }}
             keyboardType="numeric"
             placeholder="시작 (예: 9)"
             placeholderTextColor="#aaa"
@@ -131,7 +219,9 @@ export default function ScheduleForm() {
           <TextInput
             style={styles.timeInput}
             value={endTime}
-            onChangeText={setEndTime}
+            onChangeText={(text) => {
+              if (/^\d*$/.test(text)) setEndTime(text);
+            }}
             keyboardType="numeric"
             placeholder="끝 (예: 18)"
             placeholderTextColor="#aaa"
@@ -141,10 +231,29 @@ export default function ScheduleForm() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.doneButton} onPress={() => navigation.navigate('Main')}>
-          <Text style={styles.doneText}>완료</Text>
-        </TouchableOpacity>
+        <View style={styles.doneButtonWrapper}>
+          <TouchableOpacity
+            style={styles.doneButton}
+            onPress={handleSubmitSchedules}
+          >
+            <Text style={styles.doneText}>완료</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+      {popupVisible && selectedItem && (
+        <View style={styles.popup}>
+          <TouchableOpacity
+            style={styles.popupButton}
+            onPress={() => {
+              handleDelete(selectedItem.day, selectedItem.hour);
+              setPopupVisible(false);
+            }}
+          >
+            <Text style={styles.popupText}>삭제하기</Text>
+            <Text style={styles.popupIcon}>🗑️</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </Background>
   );
 }
@@ -178,10 +287,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeCell: {
-    backgroundColor: '#5D6BFF',
+    backgroundColor: '#fff',
   },
   cellText: {
-    color: 'white',
     fontSize: 12,
   },
   headerText: {
@@ -227,14 +335,23 @@ const styles = StyleSheet.create({
   doneButton: {
     borderWidth: 1,
     borderColor: 'white',
-    borderRadius: 20,
+    borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 30,
+    height: 50,
   },
   doneText: {
     color: 'white',
     fontSize: 16,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(128,128,128,0.5)', // 회색 반투명
+    borderRadius: 12,
+    height: 50,
+    zIndex: 1,
+    marginTop: 30,
   },
   daySelector: {
     flexDirection: 'row',
@@ -258,5 +375,33 @@ const styles = StyleSheet.create({
   dayTextActive: {
     fontWeight: 'bold',
     color: '#fff',
+  },
+  popup: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+
+  popupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+
+  popupText: {
+    color: '#e53935',
+    fontSize: 16,
+    marginRight: 8,
+  },
+
+  popupIcon: {
+    fontSize: 18,
+    color: '#e53935',
   },
 });

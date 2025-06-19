@@ -20,10 +20,20 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.yoojihyeon.Routinut"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5c90aaa5-7ef7-4df6-9c4e-216adc73f0e9"
+      }
+    },
+    "owner": "yoojihyeon",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
